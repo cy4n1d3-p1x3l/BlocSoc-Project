@@ -23,5 +23,9 @@
   },
   "devDependencies": {
     "prettier": "^3.0.0"
-  }
+  },
+  "main": "index.js",
+  "repository": "https://github.com/cy4n1d3-p1x3l/BlocSoc-Project",
+  "author": "cy4n1d3-p1x3l <mradulkumarsinghal2004@gmail.com>",
+  "license": "MIT"
 }
