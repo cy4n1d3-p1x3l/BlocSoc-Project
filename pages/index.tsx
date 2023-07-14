@@ -1,249 +1,125 @@
-import { useState, useEffect, useRef } from 'react'
-import SocialLogin from '@biconomy/web3-auth'
-import { ChainId } from '@biconomy/core-types'
-import { ethers } from 'ethers'
-import SmartAccount from '@biconomy/smart-account'
-import { IBalances } from '@biconomy/node-client'
-import { css } from '@emotion/css'
-import list from "../biconomy.tokenlist.json"
-import {BalancesDto } from '@biconomy/node-client'
-import { Address } from 'cluster'
+// import '../styles/styles.css'
+import '@biconomy/web3-auth/dist/src/style.css'
+import Head from 'next/head'
+import { useRouter } from 'next/router';
 
-const tokens = [
-  {
-    address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
-    decimals: 6,
-    symbol: 'USDC'
-  },
-  {
-    address: '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
-    decimals: 6,
-    symbol: 'USDT'
-  },
-  {
-    address: '0x0000000000000000000000000000000000001010',
-    decimals: 18,
-    symbol: 'MATIC',
-  }]
 
-export default function Home() {
-  const [smartAccount, setSmartAccount] = useState<SmartAccount | null>(null)
-  const sdkRef = useRef<SocialLogin | null>(null)
-  const [loading, setLoading] = useState<boolean>(false)
-  const [ball,setbal]=useState<IBalances[]>([])
-  const [name,setName]=useState<string>("")
-  const [link,setLink]=useState<string>("")
-  const[recepientAddress,setRecepientAddress]=useState<string>("")
-  const [choice,setChoice]=useState(tokens[0])
-const [amount,setAmount]=useState<string>('')
 
-  let balances;
-  async function login() {
-    if (!sdkRef.current) {
-      const socialLoginSDK = new SocialLogin()
-     
-      await socialLoginSDK.init({
-        chainId: ethers.utils.hexValue(ChainId.POLYGON_MUMBAI),
-      
-      })
-      sdkRef.current = socialLoginSDK
-      
-    }
-
-    if (!sdkRef.current.provider) {
-    
-      sdkRef.current.showWallet()
-      
-    } else {
-      setupSmartAccount()
-    }
-  }
-
-  async function setupSmartAccount() {
-    if (!sdkRef?.current?.provider) return
-    
-    setLoading(true)
-    const web3Provider = new ethers.providers.Web3Provider(
-      sdkRef.current.provider
-    )
-    try {
-      const smartAccount = new SmartAccount(web3Provider, {
-        activeNetworkId: ChainId.POLYGON_MUMBAI,
-        supportedNetworksIds: [ChainId.POLYGON_MUMBAI],
-        networkConfig: [
-          {
-          chainId: ChainId.POLYGON_MUMBAI,
-          dappAPIKey: 'Yw5ZS2-19.12f12d89-1ffc-437e-8713-d68ee187ef59',
-        }
-      ]
-      })
-      await smartAccount.init()
-      setSmartAccount(smartAccount)
-      setLoading(false)
-      getBalance(smartAccount)
-      setLink("https://mumbai.polygonscan.com/address/"+smartAccount.address)
-    } catch (e) {
-      console.log(`error ${e}`)
-    }
-  }
-  async function getBalance(smartAccount: SmartAccount){
-    if (!smartAccount) 
-    return
-    const balanceParams: BalancesDto ={chainId: ChainId.POLYGON_MUMBAI,
-    eoaAddress: smartAccount.address,
-    tokenAddresses: [list.tokens[6].address], 
-  };
-  const bal= await smartAccount.getAlltokenBalances(balanceParams);
-  balances=bal.data[0].balance
-  balances=balances*1e-18
-  console.log(balances)
-  setbal(bal.data)
-  }
-
-  const logout = async () => {
-    if (!sdkRef.current) {
-      console.error('Web3Modal not initialized.')
-      return
-    }
-    await sdkRef.current.logout()
-    sdkRef.current.hideWallet()
-    setSmartAccount(null)
-    setbal([])
-   
-  }
-  async function sendTx(){
-    if (!smartAccount) 
-    return
-    let tx
-    if (choice.symbol === 'MATIC') {
-      tx = {
-        to: recepientAddress,
-        value: ethers.utils.parseEther(amount)
-      }
-    } else {
-     /* if the selected to send is not a native token (i.e. not MATIC), then configure a custom transaction */
-     const erc20Interface = new ethers.utils.Interface([
-        'function transfer(address _to, uint256 _value)'
-      ])
-      const data = erc20Interface.encodeFunctionData(
-        'transfer', [recepientAddress, ethers.utils.parseUnits(amount, choice.decimals)]
-      )
-      tx = {
-        to: choice.address,
-        data
-      }
-    }
-
-    const txResponse = await smartAccount.sendTransaction({ transaction: tx });
-console.log('userOp hash', txResponse.hash);
-const txReciept = await txResponse.wait();
-console.log('Tx hash', txReciept.transactionHash);
-getBalance(smartAccount)
-  }
+export default function App() {
   
+    const router = useRouter();
+  
+    const handleClick = () => {
+      router.push('/home');
+    };
+  
+  return (    <div className="body"><Head>
+    
+    
+    <title>Crypto Wallet Transaction Handler</title>
+</Head>
 
-  return (
-    <div className={containerStyle}>
-      <h1 className={headerStyle}>PIXIE PURSE</h1>
-      {
-        
-        !smartAccount && !loading && (
-          <><input placeholder='name' value={name} required onChange={(event) => setName(event.target.value)} /><button className={buttonStyle} onClick={login}>Login</button></>)
-      }
-      {
-        loading && <p>Loading account details...</p>
-      }
-      {
-        smartAccount && (
-          <><div className={detailsContainerStyle}>
-            <h2>Hello {name}</h2>
-            <h3>Smart account address:</h3>
-            <p>{smartAccount.address}</p>
-            <a target="_blank" href={link}>Contract On PolygonScan</a>
-            
-          </div><div >
-              {ball.map((balance, index) => {
-                return (
-                  <div key={index}>
-                    <p>{balance.contract_ticker_symbol} - {balance.balance*(1e-18)}</p>
-                  </div>
-                )
-              })}
-            </div>
-            <button className={buttonStyle} onClick={logout}>Logout</button>
-            <div>
-            <input
-              value={recepientAddress}
-              placeholder="recipient's address"
-              onChange={e => setRecepientAddress(e.target.value)}
-              
-            />
-            <input
-              value={amount}
-              placeholder='amount'
-              onChange={e => setAmount(e.target.value)}
-              
-            />
-            <p>Choose which token you'd like to send</p>
-              <select name='tokens' id='tokens' onChange={e=>setChoice(tokens[e.target.value])}>
-                {
-                  tokens.map((token, index) => (
-                    <option
-                      key={index}
-                      value={index}
-                    >{token.symbol}</option>
-                  ))
-                }
-              </select>
-              <p>Choose which token to pay gas in</p>
-              {/* <select name='tokens' id='tokens' onChange={onratechange}>
-                {
-                  ball.map((balance, index) => (
-                    <option
-                    key={index}
-                    value={index}
-                    >{balance.contract_ticker_symbol}</option>
-                  ))
-                }
-              </select> */}
-              <button className={buttonStyle} onClick={sendTx}>sendTokens</button>
-            </div>
-            </>
-        )
-      }
-      
-      
+<>
+  <header>
+    <nav className="sticky-header">
+      <div className="header-box">
+        <a href="#about">About</a>
+      </div>
+      <div className="header-box">
+        <a href="#features">Features</a>
+      </div>
+      <div className="header-box">
+        <a href="#problems">Problems</a>
+      </div>
+      <div className="header-box">
+        <a href="#contact">Contact</a>
+      </div>
+    </nav>
+  </header>
+  <main>
+    <div className="flex-container">
+      <div className="left-column">
+        <section id="about">
+          <div className="main-box">
+            <h1>Welcome to our Crypto Wallet Transaction Handler</h1>
+            <p>Manage your digital assets with ease and security.</p>
+            <button onClick={handleClick} className="cta-btn">
+              Get Started
+            </button>
+          </div>
+        </section>
+        <section id="problems">
+          <div className="main-box">
+            <h2>Challenges and Solutions</h2>
+            <p>
+              During our project journey, we encountered various obstacles and
+              found <strong>innovative solutions</strong> to ensure a seamless
+              user experience. Our team tackled issues such as...
+            </p>
+            <ul>
+              <li>
+                Problem 1: Using a SDK for the first time was a bit challenging but reading the docs helped a lot. 
+              </li>
+              <li>
+                Problem 2: NextJs was a bit tricky to work with.
+              </li>
+              <li>
+                Problem 3: 
+              </li>
+            </ul>
+          </div>
+        </section>
+        <section id="signup">
+          <div className="main-box">
+            <h2>Tech Used</h2>
+            <p>We have used the following to build this:</p>
+            {/* <form>
+              <input type="text" placeholder="Enter your email" />
+              <input type="password" placeholder="Choose a password" />
+              <button type="submit" className="cta-btn">
+                Sign Up
+              </button>
+            </form> */}
+            <ul>
+              <li>NextJs</li>
+              <li>Biconomy SDK</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+      <div className="right-column">
+        <section id="features">
+          <div className="main-box">
+            <h2>Key Features</h2>
+            <ul>
+              <li>Securely store and manage your cryptocurrencies</li>
+              <li>Allows you ro create a wallet using your google id itself.</li>
+              <li>Instantly execute transactions with zero fees (the fees is handled by our paymaster which is prefunded.)</li>
+              <li>Support for a wide range of cryptocurrencies (Native currency MATIC and ERC20 token USDC)</li>
+              <li>Intuitive and user-friendly interface</li>
+            </ul>
+          </div>
+        </section>
+        <section id="contact">
+          <div className="main-box">
+            <h2>Contact Us</h2>
+            <p>
+              We'd love to hear from you! Reach out to our support team for any
+              queries or assistance.
+            </p>
+            <ul>
+              <li>Email: info@cryptowallet.com</li>
+              <li>Phone: +1 123 456 7890</li>
+            </ul>
+          </div>
+        </section>
+      </div>
     </div>
-  )
-    }
+  </main>
+  <footer>
+    <p>© 2023 Crypto Wallet Transaction Handler. All rights reserved.</p>
+  </footer>
+</>
 
-const detailsContainerStyle = css`
-  margin-top: 10px;
-`
-
-const buttonStyle = css`
-  padding: 14px;
-  width: 300px;
-  border: none;
-  cursor: pointer;
-  border-radius: 999px;
-  outline: none;
-  margin-top: 20px;
-  transition: all .25s;
-  &:hover {
-    background-color: rgba(0, 0, 0, .2); 
-  }
-`
-
-const headerStyle = css`
-  font-size: 44px;
-`
-
-const containerStyle = css`
-  width: 900px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  padding-top: 100px;
-`
+</div> )
+}
