@@ -90,7 +90,7 @@ h3 {
   cursor: pointer;
 }
 .loginBox a {
-  color: #262626;
+  color: #00ffff;
   font-size: 14px;
   font-weight: bold;
   text-decoration: none;
@@ -98,7 +98,7 @@ h3 {
   display: block;
 }
 a:hover {
-  color: #00ffff;
+  color: #262626;
 }
 .back p {
   color: #0000ff;

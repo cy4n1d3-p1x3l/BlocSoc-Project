@@ -171,8 +171,8 @@ export default function Home() {
               ></input>
             </>
           )}
+          {loading && <a className="back">Loading account details...</a>}
         </div>
-        {loading && <p className="button">Loading account details...</p>}
       </div>
       {smartAccount && (
         <>
